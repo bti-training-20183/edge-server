@@ -1,0 +1,1 @@
+* * * * * wget '0.0.0.0:8000/data' --post-data "data=hello"
