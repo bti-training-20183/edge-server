@@ -4,3 +4,4 @@ Flask_Cors==3.0.8
 Flask==1.0.3
 minio==4.0.18
 Werkzeug==0.15.4
+pmdarima==1.2.1
