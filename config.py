@@ -12,7 +12,7 @@ MINIO_BUCKET = environ["MINIO_BUCKET"] if environ.get(
     "MINIO_BUCKET") else "brains"
 MONGO_URL = environ["MONGO_URL"] if environ.get("MONGO_URL") else "mongodb://localhost:27017" 
 MONGO_DB = environ["MONGO_DB"] if environ.get("MONGO_DB") else "logsDB"
-MONGO_COLLECTION = environ["MONGO_COLLECTION"] if environ.get("MONGO_COLLECTION") else "preprocessor"
+MONGO_COLLECTION = environ["MONGO_COLLECTION"] if environ.get("MONGO_COLLECTION") else "edge-server"
 S3_ENDPOINT = environ["S3_ENDPOINT"] if environ.get("S3_ENDPOINT") else "s3.amazonaws.com"
 
 QUEUE = {
