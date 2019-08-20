@@ -10,6 +10,10 @@ import os
 import json
 import sys
 import pickle
+import pandas as pd
+import numpy as np
+from keras.models import load_model
+
 sys.path.append(os.getcwd())
 if not os.path.exists('tmp'):
     os.makedirs('tmp')
@@ -46,16 +50,42 @@ def predict(model_name):
     for file in files:
         Minio_Handler.download(model_path + file, to_path + file)
 
+    # Get data for prediction
+    pred_data = pd.read_csv("tmp/stock_price.csv")
+
     # Predict
     if model_type == '.pkl':
         with open(to_path + 'model.pkl', 'rb') as pkl:
             result = pickle.load(pkl).predict(n_periods=1).tolist()[0]
-    elif model_type == '.h5':
+    elif model_type == '.h5':   # Keras model
         # TODO load model and necessary files in 'tmp/' + model_name folder and predict
-        result = 2 # fake result
+        
+        # Load scaler
+        with open(to_path + 'scaler.pkl', 'rb') as pkl:
+            scaler = pickle.load(pkl)
+
+        # Scale data
+        pred_data = np.expand_dims(pred_data, 0)        # to fit with input shape of lstm model
+        scaled_data = scaler.transform(pred_data.reshape(pred_data.shape[0]*pred_data.shape[1], pred_data.shape[2]))
+        scaled_data = scaled_data.reshape(pred_data.shape[0], pred_data.shape[1], pred_data.shape[2])
+
+        # TODO: preprocess data if needed
+        
+        # Load model
+        model = load_model(to_path + 'model.h5')
+
+        # Predict 
+        pred_result = model.predict(scaled_data)
+        broadcastable_preds = np.zeros(shape=(len(pred_result), pred_data.shape[2]))
+        broadcastable_preds[:,0] = pred_result[:,0]
+        pred_result = scaler.inverse_transform(broadcastable_preds)[:,0]
+
+        result = pred_result[0]
+
     else:
-        # Load other model type
-        result = 3 # fake result
+        # Load other model type - currently there is no other model type
+        result = None
+
     return json.dumps(result)
 
 
