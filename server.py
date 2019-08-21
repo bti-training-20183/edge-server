@@ -17,6 +17,9 @@ from keras.models import load_model
 sys.path.append(os.getcwd())
 if not os.path.exists('tmp'):
     os.makedirs('tmp')
+if not os.path.exists('tmp/data'):
+    os.makedirs('tmp/data')
+
 app = Flask(__name__)
 
 app.secret_key = 'super secret key'
@@ -34,8 +37,9 @@ def data():
     return 'data'
 
 
-@app.route('/predict/<model_name>', methods=["GET"])
-def predict(model_name):
+@app.route('/predict/<model_name>/<data_name>', methods=["GET"])
+def predict(model_name,data_name):
+    print(model_name, data_name)
     # Get Model by Model Name
     result = 0
     model_info = Database_Handler.find_by_name(config.MONGO_COLLECTION, model_name)
@@ -47,11 +51,25 @@ def predict(model_name):
     model_path = model_info['file_uri']
     files = model_info['files']
     to_path = 'tmp/' + model_name + '/'
-    for file in files:
-        Minio_Handler.download(model_path + file, to_path + file)
+    print(to_path)
 
-    # Get data for prediction
-    pred_data = pd.read_csv("tmp/stock_price.csv")
+    # Download models if necessary
+    if not os.path.exists(to_path+files[0]):
+        for file in files:
+            Minio_Handler.download(model_path + file, to_path + file)
+
+    # Get data for prediction, download if necessary
+    data_info = Database_Handler.find_by_name('edge-data',data_name+'.csv')
+    data_name, data_path = data_info['name'], data_info['file_uri']
+    data_to_path = 'tmp/data/' + data_name
+    print(to_path)
+    if not os.path.exists(data_to_path):
+        for file in files:
+            Minio_Handler.download(data_path, data_to_path)
+
+    pred_data = pd.read_csv(data_to_path)
+
+    # pred_data = pd.read_csv("tmp/stock_price.csv")
 
     # Predict
     if model_type == '.pkl':
