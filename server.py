@@ -3,7 +3,7 @@ from utils.message_handler import MessageHandler
 from utils.datastore_handler import Minio_Handler
 from utils.datastore_handler import DataStoreHandler
 from utils.database_handler import Database_Handler
-from flask import Flask, request, flash, redirect
+from flask import Flask, request, flash, redirect, render_template
 from flask_cors import CORS, cross_origin
 from werkzeug.datastructures import ImmutableMultiDict
 import os
@@ -29,7 +29,11 @@ CORS(app)
 
 @app.route('/')
 def hello():
-    return 'Hello, World!'
+    models_info= list(Database_Handler.find_all(config.MONGO_COLLECTION))
+    print(models_info)
+    models = (model['name'] for model in models_info)
+    print(models)
+    return render_template('home.html', models=models)
 
 
 @app.route('/data', methods=["POST"])
