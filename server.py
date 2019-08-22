@@ -122,11 +122,13 @@ def update():
     for file in files:
         S3_Handler.download(from_path + file, 'tmp/' + file)
     
+    if not os.path.exists('tmp/' + msg['name']):
+        os.makedirs('tmp/' + msg['name'])
     # Upload to Minio
     dest = msg['name'] + '/model/'
     for filename in files:
         Minio_Handler.upload('tmp/'+filename, dest + filename)
-        os.remove('tmp/'+filename)
+        os.rename('tmp/'+filename, 'tmp/' + msg['name'] + '/' + filename)
 
 
     logs = {
@@ -135,10 +137,7 @@ def update():
         'file_uri': dest,
         'files': files
     }
-    if Database_Handler.find_by_name(config.MONGO_COLLECTION, msg['name']):
-        Database_Handler.update_by_name(config.MONGO_COLLECTION, msg['name'], logs)
-    else:
-        Database_Handler.insert(config.MONGO_COLLECTION, logs)
+    Database_Handler.update_by_name(config.MONGO_COLLECTION, msg['name'], logs)
     return 'OK'
 
 
