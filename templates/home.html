@@ -1,0 +1,42 @@
+<!doctype html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stock predictor</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap.min.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/home.css') }}">
+    <script src="{{ url_for('static', filename='js/jquery.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/bootstrap.min.js') }}"></script>
+</head>
+<body>
+    <div class="border frame" >
+        <div class="form-group">
+            <label for="models">Select model</label>
+            <select class="form-control" id="models">
+                <option disabled selected>----Select model----</option>
+                {% for model in models %}
+                <option>{{ model }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="result">Result</label>
+            <textarea class="form-control" id="result" rows="3"></textarea>
+        </div>
+    </div>
+    <script>
+    $(function(){
+        $('#models').change(function() {
+            $('#result').val('Please wait a moment.')
+            var today = new Date().toJSON().split('T')[0].replace(/-/g, '')
+            $.get( "/predict/" + $('#models').val() + '/' + today, 
+            function(data) {
+                $('#result').val(data)
+            })
+            .fail(function() {
+                $('#result').val('Some thing went wrong!')
+            })
+        });
+    })
+    </script>
+</body>
+

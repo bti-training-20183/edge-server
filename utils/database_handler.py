@@ -34,7 +34,7 @@ class DatabaseHandler:
         return self.db[collection].find()
 
     def update(self, collection, query, new):
-        return self.db[collection].update_one(query, new)
+        return self.db[collection].update_one(query, {"$set": new}, upsert=True)
 
     def update_by_name(self, collection, name, new):
         return self.update(collection, {"name": name}, new)

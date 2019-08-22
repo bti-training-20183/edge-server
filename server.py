@@ -3,7 +3,7 @@ from utils.message_handler import MessageHandler
 from utils.datastore_handler import Minio_Handler
 from utils.datastore_handler import DataStoreHandler
 from utils.database_handler import Database_Handler
-from flask import Flask, request, flash, redirect
+from flask import Flask, request, flash, redirect, render_template
 from flask_cors import CORS, cross_origin
 from werkzeug.datastructures import ImmutableMultiDict
 import os
@@ -29,7 +29,11 @@ CORS(app)
 
 @app.route('/')
 def hello():
-    return 'Hello, World!'
+    models_info= list(Database_Handler.find_all(config.MONGO_COLLECTION))
+    print(models_info)
+    models = (model['name'] for model in models_info)
+    print(models)
+    return render_template('home.html', models=models)
 
 
 @app.route('/data', methods=["POST"])
@@ -122,11 +126,13 @@ def update():
     for file in files:
         S3_Handler.download(from_path + file, 'tmp/' + file)
     
+    if not os.path.exists('tmp/' + msg['name']):
+        os.makedirs('tmp/' + msg['name'])
     # Upload to Minio
     dest = msg['name'] + '/model/'
     for filename in files:
         Minio_Handler.upload('tmp/'+filename, dest + filename)
-        os.remove('tmp/'+filename)
+        os.rename('tmp/'+filename, 'tmp/' + msg['name'] + '/' + filename)
 
 
     logs = {
@@ -135,10 +141,7 @@ def update():
         'file_uri': dest,
         'files': files
     }
-    if Database_Handler.find_by_name(config.MONGO_COLLECTION, msg['name']):
-        Database_Handler.update_by_name(config.MONGO_COLLECTION, msg['name'], logs)
-    else:
-        Database_Handler.insert(config.MONGO_COLLECTION, logs)
+    Database_Handler.update_by_name(config.MONGO_COLLECTION, msg['name'], logs)
     return 'OK'
 
 
