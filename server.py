@@ -87,9 +87,6 @@ def predict(model_name,data_name):
         scaled_data = scaler.transform(pred_data.reshape(pred_data.shape[0]*pred_data.shape[1], pred_data.shape[2]))
         scaled_data = scaled_data.reshape(pred_data.shape[0], pred_data.shape[1], pred_data.shape[2])
 
-        print("\n\n\n")
-        print(scaled_data.shape)
-        print("\n\n\n")
         # TODO: preprocess data if needed
         
         # Load model
