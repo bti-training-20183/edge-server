@@ -71,18 +71,14 @@ def predict(model_name,data_name):
         for file in files:
             Minio_Handler.download(data_path, data_to_path)
 
-    pred_data = pd.read_csv(data_to_path)
-
-    # pred_data = pd.read_csv("tmp/stock_price.csv")
+    pred_data = pd.read_csv(data_to_path, header=None)
 
     # Predict
     if model_type == '.pkl':
         with open(to_path + 'model.pkl', 'rb') as pkl:
             result = pickle.load(pkl).predict(n_periods=1).tolist()[0]
     elif model_type == '.h5':   # Keras model
-        # TODO load model and necessary files in 'tmp/' + model_name folder and predict
-        
-        # Load scaler
+            # Load scaler
         with open(to_path + 'scaler.pkl', 'rb') as pkl:
             scaler = pickle.load(pkl)
 
