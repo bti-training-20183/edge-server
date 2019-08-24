@@ -47,6 +47,7 @@ def predict(model_name,data_name):
     # Get Model by Model Name
     result = 0
     model_info = Database_Handler.find_by_name(config.MONGO_COLLECTION, model_name)
+
     if model_info is None:
         return json.dumps(result)
     
@@ -76,9 +77,14 @@ def predict(model_name,data_name):
     # Predict
     if model_type == '.pkl':
         with open(to_path + 'model.pkl', 'rb') as pkl:
-            result = pickle.load(pkl).predict(n_periods=1).tolist()[0]
+            result_one_day = pickle.load(pkl).predict(n_periods=1).tolist()
+            result_five_days = pickle.load(pkl).predict(n_periods=5).tolist()
+            result_one_month = pickle.load(pkl).predict(n_periods=30).tolist()
+            result_six_months = pickle.load(pkl).predict(n_periods=180).tolist()
+            result_one_year = pickle.load(pkl).predict(n_periods=365).tolist()
+
     elif model_type == '.h5':   # Keras model
-            # Load scaler
+        # Load scaler
         with open(to_path + 'scaler.pkl', 'rb') as pkl:
             scaler = pickle.load(pkl)
 
@@ -90,21 +96,36 @@ def predict(model_name,data_name):
         # TODO: preprocess data if needed
         
         # Load model
-        model = load_model(to_path + 'model.h5')
+        one_day_model = load_model(to_path + 'one_day_model.h5')
+        five_days_model = load_model(to_path + 'five_days_model.h5')
+        one_month_model = load_model(to_path + 'one_month_model.h5')
+        six_months_model = load_model(to_path + 'six_months_model.h5')
+        one_year_model = load_model(to_path + 'one_year_model.h5')
 
         # Predict 
-        pred_result = model.predict(scaled_data)
-        broadcastable_preds = np.zeros(shape=(len(pred_result), pred_data.shape[2]))
-        broadcastable_preds[:,0] = pred_result[:,0]
-        pred_result = scaler.inverse_transform(broadcastable_preds)[:,0]
-
-        result = pred_result[0]
-
+        result_one_day = predict_keras(scaled_data, one_day_model, scaler)
+        result_five_days = predict_keras(scaled_data, five_days_model, scaler)
+        result_one_month = predict_keras(scaled_data, one_month_model, scaler)
+        result_six_months = predict_keras(scaled_data, six_months_model, scaler)
+        result_one_year = predict_keras(scaled_data, one_year_model, scaler)
     else:
         # Load other model type - currently there is no other model type
-        result = None
+        result_one_day = None
+        result_five_days = None
+        result_one_month = None
+        result_six_months = None
+        result_one_year = None
 
-    return json.dumps(result)
+    return json.dumps([result_one_day, result_five_days, result_one_month, 
+                        result_six_months, result_one_year])
+
+def predict_keras(scaled_data, model, scaler):
+    preds = model.predict(scaled_data)
+    tmp = np.zeros(shape=(preds.shape[0]*preds.shape[1], scaled_data.shape[2]))
+    tmp[:,3] = preds.reshape(preds.shape[0]*preds.shape[1])
+    preds = scaler.inverse_transform(tmp)[:,3]
+
+    return preds.tolist()
 
 
 @app.route('/update', methods=["POST"])
