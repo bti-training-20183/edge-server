@@ -37,9 +37,9 @@ def hello():
     return render_template('home.html', models=models)
 
 
-@app.route('/predict_data', methods=["POST"])
-def predic_data():
-    return 'predict_data'
+@app.route('/data', methods=["POST"])
+def data():
+    return 'data'
 
 
 @app.route('/predict/<model_name>/<data_name>', methods=["GET"])
