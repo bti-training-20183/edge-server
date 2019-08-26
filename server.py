@@ -13,6 +13,7 @@ import pickle
 import pandas as pd
 import numpy as np
 from keras.models import load_model
+from keras import backend as K
 
 sys.path.append(os.getcwd())
 if not os.path.exists('tmp'):
@@ -36,9 +37,9 @@ def hello():
     return render_template('home.html', models=models)
 
 
-@app.route('/data', methods=["POST"])
-def data():
-    return 'data'
+@app.route('/predict_data', methods=["POST"])
+def predic_data():
+    return 'predict_data'
 
 
 @app.route('/predict/<model_name>/<data_name>', methods=["GET"])
@@ -116,8 +117,9 @@ def predict(model_name,data_name):
         result_six_months = None
         result_one_year = None
 
-    return json.dumps([result_one_day, result_five_days, result_one_month, 
-                        result_six_months, result_one_year])
+    print("\n\n\nPrediction done!\n\n\n")
+    K.clear_session()
+    return json.dumps({"1d": result_one_day, "5d": result_five_days, "1m": result_one_month, "6m": result_six_months, "1y": result_one_year})
 
 def predict_keras(scaled_data, model, scaler):
     preds = model.predict(scaled_data)

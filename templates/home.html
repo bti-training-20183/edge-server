@@ -6,31 +6,277 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/home.css') }}">
     <script src="{{ url_for('static', filename='js/jquery.js') }}"></script>
     <script src="{{ url_for('static', filename='js/bootstrap.min.js') }}"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.7.1/Chart.min.js"></script>
+    <link href="https://canvasjs.com/assets/css/jquery-ui.1.11.2.min.css" rel="stylesheet" />
+    <script src="https://canvasjs.com/assets/script/jquery-1.11.1.min.js"></script>
+    <script src="https://canvasjs.com/assets/script/jquery-ui.1.11.2.min.js"></script>
+    <script src="https://canvasjs.com/assets/script/jquery.canvasjs.min.js"></script>
+    <style>
+        .ui-tabs-anchor {
+            outline: none;
+        }
+        .charts {
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            width: 80%;
+        }
+    </style>
 </head>
 <body>
     <div class="border frame" >
         <div class="form-group">
             <label for="models">Select model</label>
             <select class="form-control" id="models">
-                <option disabled selected>----Select model----</option>
+                <option disabled selected>----Select stock----</option>
                 {% for model in models %}
                 <option>{{ model }}</option>
                 {% endfor %}
             </select>
         </div>
         <div class="form-group">
-            <label for="result">Result</label>
+            <label for="result">Predicted result for one day</label>
             <textarea class="form-control" id="result" rows="3"></textarea>
         </div>
     </div>
+
+    <div class="charts" id="tabs" style="height: 360px; margin: 0 auto;">
+        <ul>
+            <li ><a href="#tabs-1" style="font-size: 12px">5 day</a></li>
+            <li ><a href="#tabs-2"  style="font-size: 12px">1 month</a></li>
+            <li ><a href="#tabs-3" style="font-size: 12px">6 months</a></li>
+            <li ><a href="#tabs-4"  style="font-size: 12px">1 year</a></li>
+        </ul>
+        <div id="tabs-1" style="height: 300px">
+            <div id="chartContainer1" style="height: 300px; width: 100%;"></div>
+        </div>
+        <div id="tabs-2" style="height: 300px">
+            <div id="chartContainer2" style="height: 300px; width: 100%;"></div>
+        </div>
+        <div id="tabs-3" style="height: 300px">
+            <div id="chartContainer3" style="height: 300px; width: 100%;"></div>
+        </div>
+        <div id="tabs-4" style="height: 300px">
+            <div id="chartContainer4" style="height: 300px; width: 100%;"></div>
+        </div>
+    </div>
+
     <script>
+    function add_day(days) {
+        var date = new Date();
+        date.setDate(date.getDate() + days);
+        return date;
+    }
+
     $(function(){
+        $(".charts").hide();
         $('#models').change(function() {
             $('#result').val('Please wait a moment.')
             var today = new Date().toJSON().split('T')[0].replace(/-/g, '')
             $.get( "/predict/" + $('#models').val() + '/' + today, 
             function(data) {
-                $('#result').val(data)
+                $(".charts").toggle();
+                y_data = JSON.parse(data)
+
+                $('#result').val(y_data["1d"])
+
+                var dataPoints1 = [];
+                var dataPoints2 = [];
+                var dataPoints3 = [];
+                var dataPoints4 = [];
+
+                // get working dates for next 5 days
+                index = 1;
+                x_data = [];
+                while (x_data.length < y_data["5d"].length) {
+                    new_date = add_day(index);
+                    if (new_date.getDay()%6 != 0) {
+                        x_data.push(new_date);
+                    }
+                    index += 1;
+                }
+                for( var i = 0; i < x_data.length; i++ ){
+                    dataPoints1.push({x: x_data[i], y: y_data["5d"][i]});
+                }
+
+
+                // get working dates for next month
+                index = 1;
+                x_data = [];
+                while (x_data.length < y_data["1m"].length) {
+                    new_date = add_day(index);
+                    if (new_date.getDay()%6 != 0) {
+                        x_data.push(new_date);
+                    }
+                    index += 1;
+                }
+                for( var i = 0; i < x_data.length; i++ ){
+                    dataPoints2.push({x: x_data[i], y: y_data["1m"][i]});
+                }
+
+
+                // get working dates for next 6 months
+                index = 1;
+                x_data = [];
+                while (x_data.length < y_data["6m"].length) {
+                    new_date = add_day(index);
+                    if (new_date.getDay()%6 != 0) {
+                        x_data.push(new_date);
+                    }
+                    index += 1;
+                }
+                for( var i = 0; i < x_data.length; i++ ){
+                    dataPoints3.push({x: x_data[i], y: y_data["6m"][i]});
+                }
+
+
+                // get working dates for next year
+                index = 1;
+                x_data = [];
+                while (x_data.length < y_data["1y"].length) {
+                    new_date = add_day(index);
+                    if (new_date.getDay()%6 != 0) {
+                        x_data.push(new_date);
+                    }
+                    index += 1;
+                }
+                for( var i = 0; i < x_data.length; i++ ){
+                    dataPoints4.push({x: x_data[i], y: y_data["1y"][i]});
+                }
+
+                var max = dataPoints1[0].y;
+                var min = max;
+
+                for (var i = 0; i < dataPoints1.length; i++) {
+                    if(max < dataPoints1[i].y)
+                        max = dataPoints1[i].y;
+                    if(min > dataPoints1[i].y)
+                        min = dataPoints1[i].y;
+                }
+                var options1 = {
+                    animationEnabled: true,
+                    title: {
+                        text: ""
+                    },
+                    axisX: {
+                        labelFontSize: 14,
+                    },
+                    axisY: {
+                        maximum: (100.0/95.0)*max,
+                        minimum: (95.0/100.0)*min,
+                        labelFontSize: 14
+                    },
+                    data: [{
+                        type: "splineArea", //change it to line, area, bar, pie, etc
+                        color: "rgba(54,158,173,.7)",
+                        markerSize: 5,
+                        dataPoints: dataPoints1
+                    }]
+                };
+
+
+                var max = dataPoints2[0].y;
+                var min = max;
+
+                for (var i = 0; i < dataPoints2.length; i++) {
+                    if(max < dataPoints2[i].y)
+                        max = dataPoints2[i].y;
+                    if(min > dataPoints2[i].y)
+                        min = dataPoints2[i].y;
+                }
+                var options2 = {
+                    title: {
+                        text: ""
+                    },
+                    axisX: {
+                        labelFontSize: 14
+                    },
+                    axisY: {
+                        maximum: (100.0/95.0)*max,
+                        minimum: (95.0/100.0)*min,
+                        labelFontSize: 14
+                    },
+                    data: [{
+                        type: "splineArea", //change it to line, area, bar, pie, etc
+                        color: "rgba(54,158,173,.7)",
+                        markerSize: 5,
+                        dataPoints: dataPoints2
+                    }]
+                };
+
+
+                var max = dataPoints3[0].y;
+                var min = max;
+
+                for (var i = 0; i < dataPoints3.length; i++) {
+                    if(max < dataPoints3[i].y)
+                        max = dataPoints3[i].y;
+                    if(min > dataPoints3[i].y)
+                        min = dataPoints3[i].y;
+                }
+                var options3 = {
+                    title: {
+                        text: ""
+                    },
+                    axisX: {
+                        labelFontSize: 14
+                    },
+                    axisY: {
+                        maximum: (100.0/95.0)*max,
+                        minimum: (95.0/100.0)*min,
+                        labelFontSize: 14
+                    },
+                    data: [{
+                        type: "splineArea", //change it to line, area, bar, pie, etc
+                        color: "rgba(54,158,173,.7)",
+                        markerSize: 5,
+                        dataPoints: dataPoints3
+                    }]
+                };
+
+
+                var max = dataPoints4[0].y;
+                var min = max;
+
+                for (var i = 0; i < dataPoints4.length; i++) {
+                    if(max < dataPoints4[i].y)
+                        max = dataPoints4[i].y;
+                    if(min > dataPoints4[i].y)
+                        min = dataPoints4[i].y;
+                }
+                var options4 = {
+                    title: {
+                        text: ""
+                    },
+                    axisX: {
+                        labelFontSize: 14
+                    },
+                    axisY: {
+                        maximum: (100.0/95.0)*max,
+                        minimum: (95.0/100.0)*min,
+                        labelFontSize: 14
+                    },
+                    data: [{
+                        type: "splineArea", //change it to line, area, bar, pie, etc
+                        color: "rgba(54,158,173,.7)",
+                        markerSize: 5,
+                        dataPoints: dataPoints4
+                    }]
+                };
+
+                $("#tabs").tabs({
+                    create: function (event, ui) {
+                        //Render Charts after tabs have been created.
+                        $("#chartContainer1").CanvasJSChart(options1);
+                        $("#chartContainer2").CanvasJSChart(options2);
+                        $("#chartContainer3").CanvasJSChart(options3);
+                        $("#chartContainer4").CanvasJSChart(options4);
+                    },
+                    activate: function (event, ui) {
+                        //Updates the chart to its container size if it has changed.
+                        ui.newPanel.children().first().CanvasJSChart().render();
+                    }
+                });
             })
             .fail(function() {
                 $('#result').val('Some thing went wrong!')
