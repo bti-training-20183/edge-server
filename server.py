@@ -42,9 +42,10 @@ def data():
     return 'data'
 
 
-@app.route('/predict/<model_name>/<data_name>', methods=["GET"])
-def predict(model_name,data_name):
-    print(model_name, data_name)
+@app.route('/predict/<model_name>/<periods>/<data_name>', methods=["GET"])
+def predict(model_name,data_name, periods):
+    periods = int(periods)
+
     # Get Model by Model Name
     result = 0
     model_info = Database_Handler.find_by_name(config.MONGO_COLLECTION, model_name)
@@ -78,11 +79,7 @@ def predict(model_name,data_name):
     # Predict
     if model_type == '.pkl':
         with open(to_path + 'model.pkl', 'rb') as pkl:
-            result_one_day = pickle.load(pkl).predict(n_periods=1).tolist()
-            result_five_days = pickle.load(pkl).predict(n_periods=5).tolist()
-            result_one_month = pickle.load(pkl).predict(n_periods=30).tolist()
-            result_six_months = pickle.load(pkl).predict(n_periods=180).tolist()
-            result_one_year = pickle.load(pkl).predict(n_periods=365).tolist()
+            result = pickle.load(pkl).predict(n_periods=periods)
 
     elif model_type == '.h5':   # Keras model
         # Load scaler
@@ -90,44 +87,31 @@ def predict(model_name,data_name):
             scaler = pickle.load(pkl)
 
         # Scale data
-        pred_data = np.expand_dims(pred_data, 0)        # to fit with input shape of lstm model
-        scaled_data = scaler.transform(pred_data.reshape(pred_data.shape[0]*pred_data.shape[1], pred_data.shape[2]))
-        scaled_data = scaled_data.reshape(pred_data.shape[0], pred_data.shape[1], pred_data.shape[2])
-
-        # TODO: preprocess data if needed
+        pred_data_expanded = np.expand_dims(pred_data, 0)        # to fit with input shape of lstm model
+        scaled_data = scaler.transform(pred_data_expanded.reshape(pred_data_expanded.shape[0]*pred_data_expanded.shape[1]
+            , pred_data_expanded.shape[2]))
+        scaled_data = scaled_data.reshape(pred_data_expanded.shape[0], pred_data_expanded.shape[1], pred_data_expanded.shape[2])
         
         # Load model
-        one_day_model = load_model(to_path + 'one_day_model.h5')
-        five_days_model = load_model(to_path + 'five_days_model.h5')
-        one_month_model = load_model(to_path + 'one_month_model.h5')
-        six_months_model = load_model(to_path + 'six_months_model.h5')
-        one_year_model = load_model(to_path + 'one_year_model.h5')
+        model = load_model(to_path + 'model.h5')
 
         # Predict 
-        result_one_day = predict_keras(scaled_data, one_day_model, scaler)
-        result_five_days = predict_keras(scaled_data, five_days_model, scaler)
-        result_one_month = predict_keras(scaled_data, one_month_model, scaler)
-        result_six_months = predict_keras(scaled_data, six_months_model, scaler)
-        result_one_year = predict_keras(scaled_data, one_year_model, scaler)
+        result = predict_keras(scaled_data, model, scaler, periods)
     else:
         # Load other model type - currently there is no other model type
-        result_one_day = None
-        result_five_days = None
-        result_one_month = None
-        result_six_months = None
-        result_one_year = None
+        result = None
 
     print("\n\n\nPrediction done!\n\n\n")
     K.clear_session()
-    return json.dumps({"1d": result_one_day, "5d": result_five_days, "1m": result_one_month, "6m": result_six_months, "1y": result_one_year})
+    return json.dumps({"input": pred_data[-periods:][3].tolist(), "output": result.tolist()})
 
-def predict_keras(scaled_data, model, scaler):
+def predict_keras(scaled_data, model, scaler, n_periods):
     preds = model.predict(scaled_data)
     tmp = np.zeros(shape=(preds.shape[0]*preds.shape[1], scaled_data.shape[2]))
     tmp[:,3] = preds.reshape(preds.shape[0]*preds.shape[1])
     preds = scaler.inverse_transform(tmp)[:,3]
 
-    return preds.tolist()
+    return preds[:n_periods]
 
 
 @app.route('/update', methods=["POST"])
