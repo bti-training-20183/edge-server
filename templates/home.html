@@ -6,37 +6,149 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/home.css') }}">
     <script src="{{ url_for('static', filename='js/jquery.js') }}"></script>
     <script src="{{ url_for('static', filename='js/bootstrap.min.js') }}"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.5.0/Chart.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-annotation/0.5.7/chartjs-plugin-annotation.min.js"></script>
+    <style>
+        .button {
+          background-color: white; /* Green */
+          border: 2px solid #3cba9f;
+          color: black;
+          padding: 6px 10px;
+          text-align: center;
+          text-decoration: none;
+          display: inline-block;
+          font-size: 16px;
+          margin: 2px 1px;
+          -webkit-transition-duration: 0.4s; /* Safari */
+          transition-duration: 0.4s;
+          cursor: pointer;
+        }
+
+        .button:hover {
+            background-color: #3cba9f; /* Green */
+            color: white;
+        }
+    </style>
 </head>
 <body>
     <div class="border frame" >
         <div class="form-group">
-            <label for="models">Select model</label>
+            <label for="models">Select stock</label>
             <select class="form-control" id="models">
-                <option disabled selected>----Select model----</option>
+                <option disabled selected>----Select stock----</option>
                 {% for model in models %}
-                <option>{{ model }}</option>
+                {% set stock = model.split('.')[0].upper() %}
+                <option value="{{model}}">{{ stock }}</option>
                 {% endfor %}
             </select>
         </div>
         <div class="form-group">
-            <label for="result">Result</label>
-            <textarea class="form-control" id="result" rows="3"></textarea>
-        </div>
+            <label for="periods">Select period</label>
+            <select class="form-control" id="periods">
+                <option disabled selected>----Select period----</option>
+                <option value="7">1 week</option>
+                <option value="14">2 weeks</option>
+                <option value="30">1 month</option>
+                <option value="60">2 months</option>
+                <option value="90">3 months</option>
+            </select>
+        </div>   
+        <button class="button" onclick="predict()">Predict</button>     
     </div>
+    <div class="chart-container" style="position: relative; height:50vh; width:80vw; margin: 0 auto">
+        <canvas id="line-chart"></canvas>
+    </div>
+
     <script>
-    $(function(){
-        $('#models').change(function() {
-            $('#result').val('Please wait a moment.')
+        function add_day(days) {
+            var date = new Date()
+            date.setDate(date.getDate() + days)
+            return date
+        }
+        
+        function sub_day(days) {
+            var date = new Date()
+            date.setDate(date.getDate() - days)
+            return date
+        }
+
+        function predict() {
+            // $('#result').val('Please wait a moment.')
             var today = new Date().toJSON().split('T')[0].replace(/-/g, '')
-            $.get( "/predict/" + $('#models').val() + '/' + today, 
+            $.get( "/predict/" + document.getElementById('models').value + '/' + 
+                document.getElementById('periods').value +'/' + today, 
             function(data) {
-                $('#result').val(data)
+                stock_data = JSON.parse(data)
+
+                var labels = []
+                var prices = stock_data['input'].concat(stock_data["output"])
+
+                index = 1
+                while (labels.length < stock_data["input"].length) {
+                    new_date = sub_day(index)
+                    if (new_date.getDay()%6 != 0) {
+                        labels.push(new_date.getFullYear()+'-'+(new_date.getMonth()+1)+'-'+new_date.getDate())
+                    }
+                    index += 1
+                }
+                labels.reverse()
+
+                index = 0
+                while (labels.length < stock_data["input"].length + stock_data["output"].length) {
+                    new_date = add_day(index);
+                    if (new_date.getDay()%6 != 0) {
+                        labels.push(new_date.getFullYear()+'-'+(new_date.getMonth()+1)+'-'+new_date.getDate())
+                    }
+                    index += 1
+                }
+
+                today = new Date()
+                today_str = today.getFullYear()+'-'+(today.getMonth()+1)+'-'+today.getDate()
+
+                new Chart(document.getElementById("line-chart"), {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            data: prices,
+                            fill: true,
+                            borderColor: "#3cba9f"
+                        }]
+                    },                     
+
+                    options: {    
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        title: {
+                            display: true,
+                            text: 'Closing price (USD)'
+                        },
+                        legend: {
+                            display: false,
+                        },
+                        annotation: {
+                            annotations: [
+                              {
+                                type: "line",
+                                mode: "vertical",
+                                scaleID: "x-axis-0",
+                                value: today_str,
+                                borderColor: "red",
+                                label: {
+                                  content: "TODAY",
+                                  enabled: true,
+                                  position: "top"
+                                }
+                              }
+                            ]
+                        }
+                    }
+                });
             })
             .fail(function() {
-                $('#result').val('Some thing went wrong!')
+                // $('#result').val('Some thing went wrong!')
             })
-        });
-    })
+        }
     </script>
 </body>
 
