@@ -7,20 +7,38 @@
     <script src="{{ url_for('static', filename='js/jquery.js') }}"></script>
     <script src="{{ url_for('static', filename='js/bootstrap.min.js') }}"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.5.0/Chart.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-annotation/0.5.7/chartjs-plugin-annotation.min.js"></script>
     <style>
-        canvas{
-            margin:0 auto;
+        .button {
+          background-color: white; /* Green */
+          border: 2px solid #3cba9f;
+          color: black;
+          padding: 6px 10px;
+          text-align: center;
+          text-decoration: none;
+          display: inline-block;
+          font-size: 16px;
+          margin: 2px 1px;
+          -webkit-transition-duration: 0.4s; /* Safari */
+          transition-duration: 0.4s;
+          cursor: pointer;
+        }
+
+        .button:hover {
+            background-color: #3cba9f; /* Green */
+            color: white;
         }
     </style>
 </head>
 <body>
     <div class="border frame" >
         <div class="form-group">
-            <label for="models">Select model</label>
+            <label for="models">Select stock</label>
             <select class="form-control" id="models">
                 <option disabled selected>----Select stock----</option>
                 {% for model in models %}
-                <option>{{ model }}</option>
+                {% set stock = model.split('.')[0].upper() %}
+                <option value="{{model}}">{{ stock }}</option>
                 {% endfor %}
             </select>
         </div>
@@ -35,9 +53,11 @@
                 <option value="90">3 months</option>
             </select>
         </div>   
-        <button onclick="predict()">Predict</button>     
+        <button class="button" onclick="predict()">Predict</button>     
     </div>
-    <canvas id="line-chart" width="400" height="300"></canvas>
+    <div class="chart-container" style="position: relative; height:50vh; width:80vw; margin: 0 auto">
+        <canvas id="line-chart"></canvas>
+    </div>
 
     <script>
         function add_day(days) {
@@ -45,66 +65,90 @@
             date.setDate(date.getDate() + days)
             return date
         }
+        
+        function sub_day(days) {
+            var date = new Date()
+            date.setDate(date.getDate() - days)
+            return date
+        }
 
         function predict() {
-            // TODO: print wait for a moment...
-
+            // $('#result').val('Please wait a moment.')
             var today = new Date().toJSON().split('T')[0].replace(/-/g, '')
             $.get( "/predict/" + document.getElementById('models').value + '/' + 
                 document.getElementById('periods').value +'/' + today, 
             function(data) {
                 stock_data = JSON.parse(data)
+
+                var labels = []
+                var prices = stock_data['input'].concat(stock_data["output"])
+
+                index = 1
+                while (labels.length < stock_data["input"].length) {
+                    new_date = sub_day(index)
+                    if (new_date.getDay()%6 != 0) {
+                        labels.push(new_date.getFullYear()+'-'+(new_date.getMonth()+1)+'-'+new_date.getDate())
+                    }
+                    index += 1
+                }
+                labels.reverse()
+
+                index = 0
+                while (labels.length < stock_data["input"].length + stock_data["output"].length) {
+                    new_date = add_day(index);
+                    if (new_date.getDay()%6 != 0) {
+                        labels.push(new_date.getFullYear()+'-'+(new_date.getMonth()+1)+'-'+new_date.getDate())
+                    }
+                    index += 1
+                }
+
+                today = new Date()
+                today_str = today.getFullYear()+'-'+(today.getMonth()+1)+'-'+today.getDate()
+
                 new Chart(document.getElementById("line-chart"), {
                     type: 'line',
                     data: {
-                        labels: [...Array(10).keys()].map(x => x++),
-                        datasets: [{ 
-                            data: stock_data["input"],
-                            label: "Africa",
-                            borderColor: "#3e95cd",
-                            fill: false
+                        labels: labels,
+                        datasets: [{
+                            data: prices,
+                            fill: true,
+                            borderColor: "#3cba9f"
                         }]
-                    },
+                    },                     
+
                     options: {    
                         responsive: true,
-                        maintainAspectRatio: true,
+                        maintainAspectRatio: false,
                         title: {
                             display: true,
-                            text: 'World population per region (in millions)'
+                            text: 'Closing price (USD)'
+                        },
+                        legend: {
+                            display: false,
+                        },
+                        annotation: {
+                            annotations: [
+                              {
+                                type: "line",
+                                mode: "vertical",
+                                scaleID: "x-axis-0",
+                                value: today_str,
+                                borderColor: "red",
+                                label: {
+                                  content: "TODAY",
+                                  enabled: true,
+                                  position: "top"
+                                }
+                              }
+                            ]
                         }
-                    },
-                    scales: {
-                        yAxes: [{
-                            ticks: {
-                                fontSize: 20
-                            }
-                        }]
-                        xAxes: [{
-                            ticks: {
-                                fontSize: 20
-                            }
-                        }]
                     }
-                    });
+                });
             })
             .fail(function() {
-                // print something went wrong
+                // $('#result').val('Some thing went wrong!')
             })
         }
-
-        // $(function(){
-        //     $('#models').change(function() {
-        //         $('#result').val('Please wait a moment.')
-        //         var today = new Date().toJSON().split('T')[0].replace(/-/g, '')
-        //         $.get( "/predict/" + $('#models').val() + '/' + today, 
-        //         function(data) {
-        //             $('#result').val(data)
-        //         })
-        //         .fail(function() {
-        //             $('#result').val('Some thing went wrong!')
-        //         })
-        //     });
-        // })
     </script>
 </body>
 
