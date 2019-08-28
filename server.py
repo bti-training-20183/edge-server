@@ -26,7 +26,7 @@ app = Flask(__name__)
 app.secret_key = 'super secret key'
 app.config['SESSION_TYPE'] = 'filesystem'
 CORS(app)
-
+model_objects = {}
 
 @app.route('/')
 def hello():
@@ -93,8 +93,14 @@ def predict(model_name,data_name, periods):
         scaled_data = scaled_data.reshape(pred_data_expanded.shape[0], pred_data_expanded.shape[1], pred_data_expanded.shape[2])
         
         # Load model
-        model = load_model(to_path + 'model.h5')
-
+        if model_name not in model_objects:
+            print("Load model from file")
+            model = load_model(to_path + 'model.h5')
+            model._make_predict_function()	# have to initialize before threading
+            model_objects[model_name] = model
+        else:
+            print("Load model from memory")
+            model = model_objects[model_name]
         # Predict 
         result = predict_keras(scaled_data, model, scaler, periods)
     else:
@@ -102,7 +108,7 @@ def predict(model_name,data_name, periods):
         result = None
 
     print("\n\n\nPrediction done!\n\n\n")
-    K.clear_session()
+    # K.clear_session()
     return json.dumps({"input": pred_data[-periods:][3].tolist(), "output": result.tolist()})
 
 def predict_keras(scaled_data, model, scaler, n_periods):
@@ -137,6 +143,10 @@ def update():
         Minio_Handler.upload('tmp/'+filename, dest + filename)
         os.rename('tmp/'+filename, 'tmp/' + msg['name'] + '/' + filename)
 
+    print("Save model to memory")
+    model = load_model( 'tmp/' + msg['name'] + '/' + 'model.h5')
+    model._make_predict_function()	# have to initialize before threading
+    model_objects[msg['name']] = model
 
     logs = {
         'name': msg['name'],
