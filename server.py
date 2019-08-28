@@ -153,10 +153,13 @@ def update():
         os.rename('tmp/'+filename, 'tmp/' + msg['name'] + '/' + filename)
 
     print("Save model to memory")
-    model = load_model( 'tmp/' + msg['name'] + '/' + 'model.h5')
-    model._make_predict_function()	# have to initialize before threading
-    model_objects[msg['name']] = model
-    model_graphs[msg['name']] = tf.get_default_graph()
+    model_graphs[msg['name']] = Graph()
+    with model_graphs[msg['name']].as_default():
+        model_session[msg['name']] = Session()
+        with model_session[msg['name']].as_default():
+            model = load_model( 'tmp/' + msg['name'] + '/' + 'model.h5')
+            model._make_predict_function()	# have to initialize before threading
+            model_objects[msg['name']] = model
     # K.clear_session()
     logs = {
         'name': msg['name'],
