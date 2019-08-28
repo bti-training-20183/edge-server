@@ -69,7 +69,6 @@
     </div>
 
     <script>
-        let chart
         $(document).ready(function() {
             $('#loading').hide();
         })
@@ -86,13 +85,16 @@
         }
 
         function predict() {
+            var chart
             // $('#result').val('Please wait a moment.')
             var today = new Date().toJSON().split('T')[0].replace(/-/g, '');
             $('#loading').show();
+            $('#line-chart').hide();
             $.get("/predict/" + document.getElementById('models').value + '/' +
                 document.getElementById('periods').value + '/' + today,
                 function (data) {
                     $('#loading').hide();
+                    $('#line-chart').show();
                     stock_data = JSON.parse(data)
                     var labels = []
                     var prices = stock_data['input'].concat(stock_data["output"])
