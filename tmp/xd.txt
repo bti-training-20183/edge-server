@@ -1,9 +1,0 @@
-- Input/Output
-- RabbitMQ
-- Minio/Mongo
-
-sudo chown -R $USER <directory_project>
-
-
-singleton, decoration, factory, adapter
-
