@@ -14,7 +14,9 @@ import pandas as pd
 import numpy as np
 from keras.models import load_model
 from keras import backend as K
-
+import tensorflow as tf
+from tensorflow import Graph
+from tensorflow import Session
 sys.path.append(os.getcwd())
 if not os.path.exists('tmp'):
     os.makedirs('tmp')
@@ -27,7 +29,8 @@ app.secret_key = 'super secret key'
 app.config['SESSION_TYPE'] = 'filesystem'
 CORS(app)
 model_objects = {}
-
+model_graphs = {}
+model_session = {}
 @app.route('/')
 def hello():
     models_info= list(Database_Handler.find_all(config.MONGO_COLLECTION))
@@ -95,14 +98,20 @@ def predict(model_name,data_name, periods):
         # Load model
         if model_name not in model_objects:
             print("Load model from file")
-            model = load_model(to_path + 'model.h5')
-            model._make_predict_function()	# have to initialize before threading
-            model_objects[model_name] = model
+            model_graphs[model_name] = Graph()
+            with model_graphs[model_name].as_default():
+                model_session[model_name] = Session()
+                with model_session[model_name].as_default():
+                    model = load_model(to_path + 'model.h5')
+                    model._make_predict_function()	# have to initialize before threading
+                    model_objects[model_name] = model
         else:
             print("Load model from memory")
             model = model_objects[model_name]
         # Predict 
-        result = predict_keras(scaled_data, model, scaler, periods)
+        with model_graphs[model_name].as_default():
+            with model_session[model_name].as_default():
+                result = predict_keras(scaled_data, model, scaler, periods)
     else:
         # Load other model type - currently there is no other model type
         result = None
@@ -147,7 +156,8 @@ def update():
     model = load_model( 'tmp/' + msg['name'] + '/' + 'model.h5')
     model._make_predict_function()	# have to initialize before threading
     model_objects[msg['name']] = model
-    K.clear_session()
+    model_graphs[msg['name']] = tf.get_default_graph()
+    # K.clear_session()
     logs = {
         'name': msg['name'],
         'type': msg['type'],
