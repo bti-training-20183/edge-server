@@ -147,7 +147,7 @@ def update():
     model = load_model( 'tmp/' + msg['name'] + '/' + 'model.h5')
     model._make_predict_function()	# have to initialize before threading
     model_objects[msg['name']] = model
-
+    K.clear_session()
     logs = {
         'name': msg['name'],
         'type': msg['type'],
