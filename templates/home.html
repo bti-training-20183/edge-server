@@ -69,6 +69,7 @@
     </div>
 
     <script>
+        var chart;
         $(document).ready(function() {
             $('#loading').hide();
         })
@@ -85,7 +86,6 @@
         }
 
         function predict() {
-            var chart
             // $('#result').val('Please wait a moment.')
             var today = new Date().toJSON().split('T')[0].replace(/-/g, '');
             $('#loading').show();
