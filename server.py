@@ -17,6 +17,8 @@ from keras import backend as K
 import tensorflow as tf
 from tensorflow import Graph
 from tensorflow import Session
+from crawl import do_job
+
 sys.path.append(os.getcwd())
 if not os.path.exists('tmp'):
     os.makedirs('tmp')
@@ -34,9 +36,7 @@ model_session = {}
 @app.route('/')
 def hello():
     models_info= list(Database_Handler.find_all(config.MONGO_COLLECTION))
-    print(models_info)
     models = (model['name'] for model in models_info)
-    print(models)
     return render_template('home.html', models=models)
 
 
@@ -57,11 +57,11 @@ def predict(model_name,data_name, periods):
         return json.dumps(result)
     
     model_name = model_info['name']
+    stock_name = model_name.split('.')[0].upper()
     model_type = model_info['type']
     model_path = model_info['file_uri']
     files = model_info['files']
     to_path = 'tmp/' + model_name + '/'
-    print(to_path)
 
     # Download models if necessary
     if not os.path.exists(to_path+files[0]):
@@ -69,14 +69,23 @@ def predict(model_name,data_name, periods):
             Minio_Handler.download(model_path + file, to_path + file)
 
     # Get data for prediction, download if necessary
-    data_info = Database_Handler.find_by_name('edge-data',data_name+'.csv')
-    data_name, data_path = data_info['name'], data_info['file_uri']
-    data_to_path = 'tmp/data/' + data_name
-    print(to_path)
+    data_to_path = 'tmp/data/' + stock_name + '/' + data_name + '.csv'
+    data_folder = 'tmp/data' + stock_name
+    print("Data to path:", data_to_path)
     if not os.path.exists(data_to_path):
-        for file in files:
-            Minio_Handler.download(data_path, data_to_path)
-
+        if not os.path.exists(data_folder):
+            os.makedirs(data_folder)
+        params = {
+            "function": "TIME_SERIES_DAILY",
+            "symbol":  stock_name,
+            "apikey": config.API_KEY,
+            "datatype": "csv"
+        }
+        do_job(params,stock_name,data_name)
+        data_info = Database_Handler.find_by_name('edge-data',stock_name)
+        data_name, data_path = data_info['name'], data_info['file_uri']       
+        Minio_Handler.download(data_path, data_to_path)
+        
     pred_data = pd.read_csv(data_to_path, header=None)
 
     # Predict

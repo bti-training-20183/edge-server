@@ -14,10 +14,5 @@ MONGO_URL = environ["MONGO_URL"] if environ.get("MONGO_URL") else "mongodb://loc
 MONGO_DB = environ["MONGO_DB"] if environ.get("MONGO_DB") else "logsDB"
 MONGO_COLLECTION = environ["MONGO_COLLECTION"] if environ.get("MONGO_COLLECTION") else "edge-server"
 S3_ENDPOINT = environ["S3_ENDPOINT"] if environ.get("S3_ENDPOINT") else "s3.amazonaws.com"
-
-QUEUE = {
-    "from_client": "from_client",
-    "from_preprocessor": "from_preprocessor",
-    "from_creator": "from_creator",
-    "from_deployer": "from_deployer"
-}
+API_KEY = environ["API_KEY"] if environ.get("API_KEY") else "KFPBCODIA6K92KZF"
+API_ENDPOINT = environ["API_ENDPOINT"] if environ.get("API_ENDPOINT") else "https://www.alphavantage.co/query"
