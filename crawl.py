@@ -13,13 +13,17 @@ sys.path.append(os.getcwd())
 def crawl_data(params, filename):
     response = requests.get(config.API_ENDPOINT, params=params)
     print('Crawling: ', response.url)
+    empty_rows = 0
     with open(filename, 'w') as f:
         writer = csv.writer(f)
         for i, line in enumerate(response.iter_lines()):
-            if i == 91:
+            if i == (91+ empty_rows):
                 break
             if i >= 1:
-                writer.writerow(line.decode('utf-8').split(',')[1:])
+                if len(line) < 4:
+                    empty_rows += 1
+                else:
+                    writer.writerow(line.decode('utf-8').split(',')[1:])
 
 
 def save(stockname, filename):
